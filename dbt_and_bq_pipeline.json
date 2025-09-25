@@ -1,0 +1,134 @@
+{
+  "components": {
+    "comp-dbt-run-component": {
+      "executorLabel": "exec-dbt-run-component"
+    },
+    "comp-insert-record-to-bigquery": {
+      "executorLabel": "exec-insert-record-to-bigquery",
+      "inputDefinitions": {
+        "parameters": {
+          "dataset_id": {
+            "parameterType": "STRING"
+          },
+          "project_id": {
+            "parameterType": "STRING"
+          },
+          "record_data": {
+            "parameterType": "STRING"
+          },
+          "table_id": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    }
+  },
+  "defaultPipelineRoot": "gs://your-gcs-bucket/pipeline-artifacts",
+  "deploymentSpec": {
+    "executors": {
+      "exec-dbt-run-component": {
+        "container": {
+          "args": [
+            "--project-dir",
+            "/dbt/vertexAI",
+            "--profiles-dir",
+            "/dbt/vertexAI"
+          ],
+          "command": [
+            "dbt",
+            "run"
+          ],
+          "image": "gcr.io/your-project-id/dbt-runner:latest"
+        }
+      },
+      "exec-insert-record-to-bigquery": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "insert_record_to_bigquery"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-bigquery'  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.14.3' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef insert_record_to_bigquery(\n    project_id: str,\n    dataset_id: str,\n    table_id: str,\n    record_data: str\n):\n    \"\"\"Inserts a single JSON record into a BigQuery table.\"\"\"\n    from google.cloud import bigquery\n    import json\n\n    client = bigquery.Client()\n    table_ref = client.dataset(dataset_id).table(table_id)\n\n    # The record_data is passed as a string and needs to be loaded as a JSON object\n    rows_to_insert = [json.loads(record_data)]\n\n    errors = client.insert_rows_json(table_ref, rows_to_insert)\n    if errors:\n        raise RuntimeError(f\"Encountered errors while inserting rows: {errors}\")\n    else:\n        print(\"New rows have been added.\")\n\n"
+          ],
+          "image": "python:3.9-slim"
+        }
+      }
+    }
+  },
+  "pipelineInfo": {
+    "name": "dbt-and-bq-pipeline"
+  },
+  "root": {
+    "dag": {
+      "tasks": {
+        "dbt-run-component": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-dbt-run-component"
+          },
+          "taskInfo": {
+            "name": "dbt-run-component"
+          }
+        },
+        "insert-record-to-bigquery": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-insert-record-to-bigquery"
+          },
+          "dependentTasks": [
+            "dbt-run-component"
+          ],
+          "inputs": {
+            "parameters": {
+              "dataset_id": {
+                "componentInputParameter": "dataset_id"
+              },
+              "project_id": {
+                "componentInputParameter": "project_id"
+              },
+              "record_data": {
+                "componentInputParameter": "record_data"
+              },
+              "table_id": {
+                "componentInputParameter": "table_id"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "insert-record-to-bigquery"
+          }
+        }
+      }
+    },
+    "inputDefinitions": {
+      "parameters": {
+        "dataset_id": {
+          "parameterType": "STRING"
+        },
+        "project_id": {
+          "parameterType": "STRING"
+        },
+        "record_data": {
+          "parameterType": "STRING"
+        },
+        "table_id": {
+          "parameterType": "STRING"
+        }
+      }
+    }
+  },
+  "schemaVersion": "2.1.0",
+  "sdkVersion": "kfp-2.14.3"
+}
