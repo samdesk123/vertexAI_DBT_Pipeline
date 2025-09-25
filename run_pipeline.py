@@ -6,12 +6,12 @@ from google.cloud import aiplatform
 from main_pipeline import dbt_and_bq_pipeline
 
 # ---- Configuration ----
-PROJECT_ID = 'gcp-wow-rwds-ai-mmm-dev'
+PROJECT_ID = '{{ env_var('PROJECT_ID') }}'
 REGION = 'us-central1'
-GCS_BUCKET = 'wx-d9688460-674a-444a-95b2-64672838518d'
+GCS_BUCKET = '{{ env_var('GCS_BUCKET') }}'
 PIPELINE_ROOT = f'gs://{GCS_BUCKET}/pipeline_root'
-DATASET_ID = 'shubham'
-TABLE_ID = 'test_vertexai'
+DATASET_ID = '{{ env_var('DATASET_ID') }}'
+TABLE_ID = '{{ env_var('TABLE_ID') }}'
 # The data to insert, as a JSON string
 RECORD_DATA = '{"name": "shubham", "surname": "singh", "role": "CA"}'
 
