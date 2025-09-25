@@ -1,17 +1,21 @@
 # run_pipeline.py
 import kfp.v2.compiler as compiler
 from google.cloud import aiplatform
+from dotenv import load_dotenv
+import os
 
 # Import the pipeline definition from main_pipeline.py
 from main_pipeline import dbt_and_bq_pipeline
 
+load_dotenv()
+
 # ---- Configuration ----
-PROJECT_ID = '{{ env_var('PROJECT_ID') }}'
+PROJECT_ID = os.getenv("PROJECT_ID")
 REGION = 'us-central1'
-GCS_BUCKET = '{{ env_var('GCS_BUCKET') }}'
+GCS_BUCKET = os.getenv("GCS_BUCKET")
 PIPELINE_ROOT = f'gs://{GCS_BUCKET}/pipeline_root'
-DATASET_ID = '{{ env_var('DATASET_ID') }}'
-TABLE_ID = '{{ env_var('TABLE_ID') }}'
+DATASET_ID = os.getenv("DATASET_ID")
+TABLE_ID = os.getenv("TABLE_ID")
 # The data to insert, as a JSON string
 RECORD_DATA = '{"name": "shubham", "surname": "singh", "role": "CA"}'
 

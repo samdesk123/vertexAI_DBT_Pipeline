@@ -2,3 +2,4 @@ vetexAI/profiles.yml
 logs/
 *.json
 __pycache__/
+.env
