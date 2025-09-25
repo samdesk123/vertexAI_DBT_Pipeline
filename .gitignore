@@ -1,4 +1,4 @@
 vetexAI/profiles.yml
 logs/
-.jason
+*.json
 __pycache__/
